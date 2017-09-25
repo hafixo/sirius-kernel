@@ -10,17 +10,21 @@ package sirius.kernel;
 
 import sirius.kernel.nls.NLS;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Initializes and stops Sirius as part of the tests.
  */
 public class TestHelper {
-
-    private static Class<?> frameworkStarter = null;
+    private static List<Class<?>> frameworkStarters = null;
 
     private TestHelper() {
     }
 
     /**
+     * TODO: update javadoc
      * Initializes the framework for the given class.
      * <p>
      * The given class is used to determine when to stop the framework again.
@@ -30,9 +34,13 @@ public class TestHelper {
      *
      * @param testClass the test class starting the framework
      */
-    public static void setUp(Class<?> testClass) {
-        if (frameworkStarter == null) {
-            frameworkStarter = testClass;
+    public static void setUp(Class<?> testClass, Class<?>... testClasses) {
+        if (frameworkStarters == null) {
+            frameworkStarters = new ArrayList<>();
+
+            frameworkStarters.add(testClass);
+            frameworkStarters.addAll(Arrays.asList(testClasses));
+
             Sirius.start(new Setup(Setup.Mode.TEST, Sirius.class.getClassLoader()));
             NLS.setDefaultLanguage("de");
         }
@@ -44,7 +52,9 @@ public class TestHelper {
      * @param testClass the test class being finished
      */
     public static void tearDown(Class<?> testClass) {
-        if (frameworkStarter == testClass) {
+        frameworkStarters.removeIf(aClass -> aClass == testClass);
+
+        if (frameworkStarters.isEmpty()) {
             Sirius.stop();
             NLS.getTranslationEngine().reportMissingTranslations();
         }
