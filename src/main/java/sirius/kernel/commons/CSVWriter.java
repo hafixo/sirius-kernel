@@ -35,6 +35,7 @@ public class CSVWriter implements Closeable {
     private char separator = ';';
     private char quotation = '"';
     private char escape = '\\';
+    private boolean trim = true;
 
     /**
      * Creates a new writer sending data to the given writer.
@@ -90,6 +91,19 @@ public class CSVWriter implements Closeable {
     }
 
     /**
+     * Controls if each added cell value of the type String should be trimmed or not
+     * <p>
+     * By default this is <tt>true</tt>. Use <tt>false</tt> if strings should not be trimmed.
+     *
+     * @param trim the value controlling if strings should be trimmed
+     * @return the writer itself for fluent method calls
+     */
+    public CSVWriter withInputTrimming(boolean trim) {
+        this.trim = trim;
+        return this;
+    }
+
+    /**
      * Writes the given list of values as row.
      *
      * @param row the data to write. <tt>null</tt> values will be completely skipped.
@@ -139,7 +153,14 @@ public class CSVWriter implements Closeable {
     }
 
     private void writeColumn(Object o) throws IOException {
-        String stringValue = NLS.toMachineString(o);
+        String stringValue;
+
+        if (!(o instanceof String) || trim) {
+            stringValue = NLS.toMachineString(o);
+        } else {
+            stringValue = Strings.toString(o);
+        }
+
         if (stringValue == null) {
             stringValue = "";
         }
@@ -147,38 +168,7 @@ public class CSVWriter implements Closeable {
         boolean shouldQuote = false;
         for (int i = 0; i < stringValue.length(); i++) {
             char currentChar = stringValue.charAt(i);
-            if (currentChar == escape) {
-                effectiveValue.append(escape).append(escape);
-                continue;
-            }
-            if (quotation == '\0') {
-                if (currentChar == separator) {
-                    if (escape != '\0') {
-                        effectiveValue.append(escape).append(separator);
-                        continue;
-                    } else {
-                        throw new IllegalArgumentException(Strings.apply(
-                                "Cannot output a column which contains the separator character '%s' "
-                                + "without an escape or quotation character.",
-                                separator));
-                    }
-                }
-                if (currentChar == '\r' || currentChar == '\n') {
-                    throw new IllegalArgumentException(
-                            "Cannot output a column which contains a line break without an quotation character.");
-                }
-            } else if (currentChar == separator || currentChar == '\r' || currentChar == '\n') {
-                shouldQuote = true;
-            }
-            if (shouldQuote && currentChar == quotation) {
-                if (escape == '\0') {
-                    throw new IllegalArgumentException(
-                            "Cannot output a quotation character within a quoted string without an escape character.");
-                } else {
-                    effectiveValue.append(escape);
-                }
-            }
-            effectiveValue.append(currentChar);
+            shouldQuote = processCharacter(currentChar, effectiveValue, shouldQuote);
         }
         if (shouldQuote) {
             writer.append(quotation);
@@ -186,6 +176,51 @@ public class CSVWriter implements Closeable {
             writer.append(quotation);
         } else {
             writer.append(effectiveValue);
+        }
+    }
+
+    private boolean processCharacter(char currentChar, StringBuilder effectiveValue, boolean shouldQuote) {
+        if (currentChar == escape) {
+            effectiveValue.append(escape).append(currentChar);
+            return shouldQuote;
+        }
+
+        if (quotation == '\0') {
+            processCharacterWithoutQuotation(currentChar, effectiveValue);
+            return shouldQuote;
+        }
+
+        if (currentChar == separator || currentChar == '\r' || currentChar == '\n') {
+            shouldQuote = true;
+        }
+
+        if (shouldQuote && currentChar == quotation) {
+            if (escape == '\0') {
+                throw new IllegalArgumentException(
+                        "Cannot output a quotation character within a quoted string without an escape character.");
+            } else {
+                effectiveValue.append(escape);
+            }
+        }
+        effectiveValue.append(currentChar);
+        return shouldQuote;
+    }
+
+    private void processCharacterWithoutQuotation(char currentChar, StringBuilder effectiveValue) {
+        if (currentChar == separator) {
+            if (escape != '\0') {
+                effectiveValue.append(escape).append(currentChar);
+            } else {
+                throw new IllegalArgumentException(Strings.apply(
+                        "Cannot output a column which contains the separator character '%s' "
+                        + "without an escape or quotation character.",
+                        separator));
+            }
+        } else if (currentChar == '\r' || currentChar == '\n') {
+            throw new IllegalArgumentException(
+                    "Cannot output a column which contains a line break without an quotation character.");
+        } else {
+            effectiveValue.append(currentChar);
         }
     }
 

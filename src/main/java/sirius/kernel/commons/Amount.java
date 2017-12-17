@@ -484,6 +484,8 @@ public class Amount implements Comparable<Amount> {
      * than the given one
      */
     @Override
+    @SuppressWarnings("squid:S1698")
+    @Explain("Indentity against this is safe and a shortcut to speed up comparisons")
     public int compareTo(Amount o) {
         if (o == null) {
             return 1;
@@ -582,6 +584,8 @@ public class Amount implements Comparable<Amount> {
      * @return the amount with the lower value or an empty amount, if both amounts are empty
      */
     @Nonnull
+    @SuppressWarnings("squid:S1698")
+    @Explain("Indentity against this is safe and a shortcut to speed up comparisons")
     public Amount min(@Nullable Amount other) {
         if (other == this || other == null) {
             return this;
@@ -605,6 +609,8 @@ public class Amount implements Comparable<Amount> {
      * @return the amount with the higher value or an empty amount, if both amounts are empty
      */
     @Nonnull
+    @SuppressWarnings("squid:S1698")
+    @Explain("Indentity against this is safe and a shortcut to speed up comparisons")
     public Amount max(@Nullable Amount other) {
         if (other == this || other == null) {
             return this;
@@ -678,11 +684,28 @@ public class Amount implements Comparable<Amount> {
     @Nonnull
     @CheckReturnValue
     public Amount round(@Nonnull NumberFormat format) {
+        return round(format.getScale(), format.getRoundingMode());
+    }
+
+    /**
+     * Rounds the number according to the given format. In contrast to only round values when displaying them as
+     * string, this method returns a modified <tt>Amount</tt> which as potentially lost some precision. Depending on
+     * the next computation this might return significantly different values in contrast to first performing all
+     * computations and round at the end when rendering the values as string.
+     *
+     * @param scale        the precision
+     * @param roundingMode the rounding operation
+     * @return returns an <tt>Amount</tt> which is rounded using the given {@code RoundingMode}
+     * or <tt>NOTHING</tt> if the value is empty.
+     */
+    @Nonnull
+    @CheckReturnValue
+    public Amount round(int scale, @Nonnull RoundingMode roundingMode) {
         if (isEmpty()) {
             return NOTHING;
         }
 
-        return Amount.of(value.setScale(format.getScale(), format.getRoundingMode()));
+        return Amount.of(value.setScale(scale, roundingMode));
     }
 
     private Value convertToString(NumberFormat format, boolean smartRound) {
