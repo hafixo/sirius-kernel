@@ -13,13 +13,15 @@ buildscript {
 apply plugin: 'sirius-parent'
 
 
+group = "com.scireum"
+version = "7.2.1"
 
 dependencies {
-    compile 'com.typesafe:config:1.3.1'
-    compile 'com.google.guava:guava:21.0'
-    compile 'log4j:log4j:1.2.17'
-    compile 'com.google.code.findbugs:jsr305:3.0.1'
-    compile 'org.fusesource:sigar:1.6.4'
+    api 'com.typesafe:config:1.3.1'
+    api 'com.google.guava:guava:21.0'
+    api 'log4j:log4j:1.2.17'
+    api 'com.google.code.findbugs:jsr305:3.0.1'
+    api 'org.fusesource:sigar:1.6.4'
 }
 
 
